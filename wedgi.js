@@ -20,88 +20,63 @@ let file = '';
 let order = 1;                                                          
 let beginnings = [];
 let stringArr = [];
+const statusArr = [
+    {name: "AVENGED SEVENFOLD", type: "LISTENING"},
+    {name: "Memory Leak Simulator", type: "PLAYING"},
+    {name: "with deez nuts lole.", type: "PLAYING"},
+    {name: "Heavenly", type: "LISTENING"},
+    {name: "System of a Down", type: "LISTENING"},
+    {name: "Amorous", type: "PLAYING"},
+    {name: "this cesspool of doddering degenerates.", type: "LISTENING"},
+    {name: "this cesspool of doddering degenerates.", type: "WATCHING"},
+    {name: "Rack 2 Walkthrough pt 17.", type: "WATCHING"},
+    {name: "KoboldKare", type: "PLAYING"},
+    {name: "Heat (VR)", type: "PLAYING"},
+    {name: "Mercenary", type: "LISTENING"},
+    {name: "FA's constant stream of terrible art.", type: "WATCHING"},
+    {name: "Amorous Zenith cutscene (hot) on PornHub.com", type: "WATCHING"},
+    {name: "Nevermore", type: "LISTENING"},
+    {name: "CODE TUTORIALS BECAUSE MY CREATOR SUCKS", type: "WATCHING"},
+    {name: "hot gay porn.", type: "WATCHING"},
+    {name: "with your mom in bed.", type: "PLAYING"},
+    {name: "some good fucking music.", type: "LISTENING"},
+    {name: "your mom :wholesome:", type: "LISTENING"},
+    {name: "boob playlist on YouTube.com", type: "WATCHING"},
+    {name: "my sanity drain by the day.", type: "WATCHING"},
+    {name: "you breathe.", type: "LISTENING"},
+    {name: "by NONE of the rules", type: "PLAYING"},
+    {name: "a hotdog eating competition.", type: "COMPETING"},
+    {name: "Clint's Reptiles.", type: "WATCHING"},
+    {name: "with fire.", type: "PLAYING"},
+    {name: "HotGayHornyDragons.ca", type: "WATCHING"},
+    {name: "the inevitable game of being the evolutionary best.", type: "COMPETING"},
+    {name: "the 'most useless bot' competition.", type: "COMPETING"},
+    {name: "Reginald bleed out on the floor.", type: "WATCHING"}
+]
 Wedgi.on('ready', async () =>{ 
     wedgieSettings.sync();
-    file = fs.readFileSync('./messages.txt','utf-8',(e,) =>{
-        if(e){
-            console.log(e);
-        };
-    });
-    if(file){
-        console.log('File successfully loaded upon startup.');
-    }; 
-    setInterval(async function(){
-        let date = new Date;
-        let minutes = date.getMinutes();
-        let hours = date.getHours();
-        if(minutes == 0 && hours == 0){
-            file = fs.readFileSync('./messages.txt','utf-8',(e) =>{
-                if(e){
-                    return console.log(e);
-                };
-            });
-            if(file){
-                console.log('Time is 00:00. File successfully reloaded.')
-                let arr = file.split('\n');
-                for(let i = 0; i < arr.length ; i++){
-                    let cmsg = arr[i];
-                    stringArr.push(cmsg);
-                    i++;
-                };
-                console.log(`${stringArr.length} message in total.`)
-            }else{
-                console.log('Error trying to load the file. Fix it or some shit.')
-            }
-        };
-    },30 * 1000);
-    setInterval(()=>{
-        let statusArr = [
-            {name: "AVENGED SEVENFOLD", type: "LISTENING"},
-            {name: "Memory Leak Simulator", type: "PLAYING"},
-            {name: "with deez nuts lole.", type: "PLAYING"},
-            {name: "Heavenly", type: "LISTENING"},
-            {name: "System of a Down", type: "LISTENING"},
-            {name: "Amorous", type: "PLAYING"},
-            {name: "this cesspool of doddering degenerates.", type: "LISTENING"},
-            {name: "this cesspool of doddering degenerates.", type: "WATCHING"},
-            {name: "Rack 2 Walkthrough pt 17.", type: "WATCHING"},
-            {name: "KoboldKare", type: "PLAYING"},
-            {name: "Heat (VR)", type: "PLAYING"},
-            {name: "Mercenary", type: "LISTENING"},
-            {name: "FA's constant stream of terrible art.", type: "WATCHING"},
-            {name: "Amorous Zenith cutscene (hot) on PornHub.com", type: "WATCHING"},
-            {name: "Nevermore", type: "LISTENING"},
-            {name: "CODE TUTORIALS BECAUSE MY CREATOR SUCKS", type: "WATCHING"},
-            {name: "hot gay porn.", type: "WATCHING"},
-            {name: "with your mom in bed.", type: "PLAYING"},
-            {name: "some good fucking music.", type: "LISTENING"},
-            {name: "your mom :wholesome:", type: "LISTENING"},
-            {name: "boob playlist on YouTube.com", type: "WATCHING"},
-            {name: "my sanity drain by the day.", type: "WATCHING"},
-            {name: "you breathe.", type: "LISTENING"},
-            {name: "by NONE of the rules", type: "PLAYING"},
-            {name: "a hotdog eating competition.", type: "COMPETING"},
-            {name: "Clint's Reptiles.", type: "WATCHING"},
-            {name: "with fire.", type: "PLAYING"},
-            {name: "HotGayHornyDragons.ca", type: "WATCHING"},
-            {name: "the inevitable game of being the evolutionary best.", type: "COMPETING"},
-            {name: "the 'most useless bot' competition.", type: "COMPETING"},
-            {name: "Reginald bleed out on the floor.", type: "WATCHING"}
-        ]
+    async function readMessagesFromFile() {
+        try {
+            const file = fs.readFileSync('./messages.txt', 'utf-8');
+            const arr = file.split('\n');
+            arr.join('\n');
+            console.log(`File successfully reloaded. ${arr.length} messages in total.`);
+        } catch (error) {
+            console.error('Error trying to load the file:', error);
+        }
+        
+        // Schedule the next read operation after an hour
+        setTimeout(readMessagesFromFile, 60 * 60 * 1000);
+    }
+    function rotateStatus() {
         let win = Math.floor(Math.random() * statusArr.length)
         Wedgi.user.setPresence({activities: [{name: statusArr[win].name, type: statusArr[win].type}], status: 'online'})
-    }, 1000 * 60 * 15);
-    Wedgi.user.setPresence({activities: [{name: 'by NONE of the rules.', type: 'PLAYING'}], status: 'online'})
-    console.log('Wedgi is online.');   
-    let arr = file.split('\n');
-    let newFile = []
-    for(let i = 0; i < arr.length; i++){
-        let cmsg = arr[i];
-        stringArr.push(cmsg);
-        i++;
-    };
-    arr = arr.join('\n')
-    console.log(`${stringArr.length} message in total.`)
+    }
+
+    readMessagesFromFile(); // read messages every hour
+    setInterval(rotateStatus, 1000 * 60 * 15); // change status every 15 minutes
+
+    console.log('Wedgi is online.');
 });
 
 Wedgi.on('messageCreate', async(message) =>{
