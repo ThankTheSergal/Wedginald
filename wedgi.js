@@ -3,7 +3,6 @@ const fs = require('fs');
 const intents = new Discord.Intents();
     intents.add(Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MESSAGE_TYPING, Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MEMBERS);
 const Wedgi = new Discord.Client({intents: intents});
-const Token = 'Your Token Here';
 const Sequelize = require('sequelize');
 const sequelize = new Sequelize('database', 'user', 'password', {
     host:'localhost',
@@ -16,10 +15,70 @@ const wedgieSettings = sequelize.define('wedgieSettings',{
     racism:        Sequelize.BOOLEAN,
     gid:           Sequelize.STRING
 });
+
 let file = '';
-let order = 1;                                                          
+let order = 2;                                                          
 let beginnings = [];
 let stringArr = [];
+let ngrams = {}; 
+
+function compileMessages(){
+    beginnings = [];
+    try{
+        let text = stringArr.join(' ');
+        text = text.replace(/s.reply/g, '')
+        let strArr = text.split(' ');
+        for(let i = 0; i <= strArr.length - order; i++){
+            let gram = '';
+            for(let j = 0; j < order; j++){
+                gram += `${strArr[j + i]} `;
+            }
+            if(!ngrams[gram]){
+                ngrams[gram] = [];
+                beginnings.push(gram);
+            }
+            let pushString = '';
+            for(let j = 0; j <= order - 1; j++){
+                pushString += `${strArr[i + order + j]} `;
+            }
+            ngrams[gram].push(pushString);
+        }
+        return 1;
+    }catch(e){
+        console.log(e);
+        return 0;
+    }
+}
+
+async function SendMessage(message, ngrams){
+    if(!ngrams){
+        console.log('Empty'); 
+        return;
+    } 
+    try{
+        let currentGram = beginnings[Math.floor(Math.random() * beginnings.length)];    //Generating the message.
+        let result = currentGram;
+        let len = Math.floor(Math.random() * 12) + 4;
+        for(let i = 0; i < len; i++){
+            let possibilities = ngrams[currentGram];
+            let size = possibilities.toString().split(',');
+            let next = possibilities[Math.floor(Math.random() * size.length)];
+            result += next;
+            currentGram = next;
+            let endChance = Math.floor(Math.random() * 2);
+            if(!currentGram) break;
+            if(currentGram.match(/[?.!]/g) && endChance < 1){
+                console.log('Complete Sentence.');
+                break;
+            };
+        };
+        result = result.replace(/ↈ/g, '\n');
+        return message.channel.send(`${result}`);
+    }catch(e){
+        console.log(e);
+    };
+}
+
 Wedgi.on('ready', async () =>{ 
     wedgieSettings.sync();
     file = fs.readFileSync('./messages.txt','utf-8',(e,) =>{
@@ -41,19 +100,25 @@ Wedgi.on('ready', async () =>{
                 };
             });
             if(file){
-                console.log('Time is 00:00. File successfully reloaded.')
+                console.log('Time is 00:00. File successfully reloaded.');
                 let arr = file.split('\n');
                 for(let i = 0; i < arr.length ; i++){
                     let cmsg = arr[i];
                     stringArr.push(cmsg);
                     i++;
                 };
-                console.log(`${stringArr.length} message in total.`)
+                console.log(`${stringArr.length} message in total. Compiling messages...`);
+                let success = compileMessages();
+                if(success){
+                    console.log("Messages compiled, ready to use.");
+                }else{
+                    console.log("Messages failed.");
+                }
             }else{
-                console.log('Error trying to load the file. Fix it or some shit.')
+                console.log('Error trying to load the file. Fix it or some shit.');
             }
         };
-    },30 * 1000);
+    },60 * 1000);
     setInterval(()=>{
         let statusArr = [
             {name: "AVENGED SEVENFOLD", type: "LISTENING"},
@@ -94,14 +159,19 @@ Wedgi.on('ready', async () =>{
     Wedgi.user.setPresence({activities: [{name: 'by NONE of the rules.', type: 'PLAYING'}], status: 'online'})
     console.log('Wedgi is online.');   
     let arr = file.split('\n');
-    let newFile = []
     for(let i = 0; i < arr.length; i++){
         let cmsg = arr[i];
         stringArr.push(cmsg);
         i++;
     };
     arr = arr.join('\n')
-    console.log(`${stringArr.length} message in total.`)
+    console.log(`${stringArr.length} message in total.`);
+
+    let initialCompile = null
+    console.log("Compiling messages...");
+    initialCompile = compileMessages();
+    let compileStatus = (initialCompile) ? 'Success' : 'Failed';
+    console.log(`Initial compile status: ${compileStatus}`);
 });
 
 Wedgi.on('messageCreate', async(message) =>{
@@ -132,17 +202,10 @@ Wedgi.on('messageCreate', async(message) =>{
             let wejSetArgs = message.content.substr(8);
                 wejSetArgs = wejSetArgs.split(' ').shift();
                 if(wejSetArgs.match(/r=[0-1]/g)){
-                    let rArg = wejSetArgs.replace(/[a-zA-Z\=]/g,'')
-                    let rFlag = new Boolean;
+                    let rArg = wejSetArgs.replace(/[a-zA-Z\=]/g,'');
+                    let rFlag = (rArg == 1) ? true : false;
                     try{
-                        if(rArg == 0){
-                            rFlag = false;
-                        }else if(rArg == 1){
-                            rFlag = true;
-                        }else{
-                            return console.log('rFlag was not 0 or 1.');
-                        };
-                        settings.update({racism: rFlag});
+                        await settings.update({racism: rFlag});
                         return message.channel.send(`Updated settings for \`${message.guild.name}\`. Racism is now ${rFlag}.`)
                     }catch(e){
                         return console.log(e);
@@ -182,44 +245,24 @@ Wedgi.on('messageCreate', async(message) =>{
         };
         let chance = settings.dataValues.chanceToSpeak;     //Start of the markov stuff.
         let outcome = Math.floor(Math.random() * 1000);
-        if(outcome < chance || message.content.toLocaleLowerCase().match('wedginald') || message.mentions.has(Wedgi.user) || message.content.toLocaleLowerCase().match('wigger')){
-            message.channel.sendTyping().then(() =>{
-                let copyMessageChance = Math.floor(Math.random() * 2);
-                if(copyMessageChance < 1){
-                    let rMessage = Math.floor(Math.random() * stringArr.length / 2);
-                    let cMessage = stringArr[rMessage * 2];
-                    console.log('message copied');
-                    return message.channel.send(cMessage)
-                }
-                let text = stringArr.join(' ');
-                    text = text.replace(/s.reply/g, '')
-                let strArr = text.split(' ');
-                let ngrams = {};
-                for(let i = 0; i <= strArr.length - order; i++){
-                    let gram = '';
-                    for(let j = 0; j < order; j++){
-                        gram += `${strArr[j + i]} `;
-                    }
-                    if(!ngrams[gram]){
-                        ngrams[gram] = [];
-                        beginnings.push(gram);
-                    }
-                    let pushString = '';
-                    for(let j = 0; j <= order - 1; j++){
-                        pushString += `${strArr[i + order + j]} `;
-                    }
-                    ngrams[gram].push(pushString);
-                }
-                SendMessage(message, ngrams);
-                beginnings = [];
-            })
+    if(outcome < chance || message.content.toLocaleLowerCase().match('wedginald') || message.mentions.has(Wedgi.user) || message.content.toLocaleLowerCase().match('wigger')){
+        message.channel.sendTyping().then(() =>{
+        let copyMessageChance = Math.floor(Math.random() * 3);
+        if(copyMessageChance < 1){
+            let rMessage = Math.floor(Math.random() * stringArr.length / 2);
+            let cMessage = stringArr[rMessage * 2];
+            console.log('message copied');
+            return message.channel.send(cMessage)
+        }
+        SendMessage(message, ngrams);
+    })
         };
     }else{
         return console.log(`Could not find table for guild ${message.guild.name} (ID = ${message.guild.id})`);
     };
 });
 
-Wedgi.on('guildCreate',async (guild) =>{
+Wedgi.on('guildCreate',async (guild) => {
     let table = await wedgieSettings.findOne({where: {gid: guild.id}})
     if(!table){
         table = await wedgieSettings.create({
@@ -237,32 +280,8 @@ Wedgi.on('guildCreate',async (guild) =>{
             return sChannel.send(`oh hey ive been here before`);
         };
     };
-})
-async function SendMessage(message, ngrams){
-    try{
-        let currentGram = beginnings[Math.floor(Math.random() * beginnings.length)];    //Generating the message.
-        let result = currentGram;
-        let len = Math.floor(Math.random() * 12) + 4;
-        for(let i = 0; i < len; i++){
-            let possibilities = ngrams[currentGram];
-            let size = possibilities.toString().split(',');
-            let next = possibilities[Math.floor(Math.random() * size.length)];
-            result += next;
-            currentGram = next;
-            let endChance = Math.floor(Math.random() * 2);
-            if(!currentGram) break;
-            if(currentGram.match(/[?.!]/g) && endChance < 1){
-                console.log('Complete Sentence.');
-                break;
-            };
-        };
-        result = result.replace(/:transgender_flag:/g, ':transgender_flag: :x:');
-        result = result.replace(/ↈ/g, '\n');
-        return message.channel.send(`${result}`);
-    }catch(e){
-        console.log(e);
-    };
-}
+});
+
 process.on('unhandledRejection', error => console.error('Uncaught Promise Rejection', error));
 Wedgi.login(Token);
 
